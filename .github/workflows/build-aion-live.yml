@@ -2,7 +2,9 @@ name: Build AION Server OS Live ISO
 on:
   push:
     branches: [aion-os-live]
-    paths: ['aion-os-live-src/**','.github/workflows/build-aion-live.yml']
+    paths:
+      - 'aion-os-live-src/**'
+      - '.github/workflows/build-aion-live.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,7 +25,8 @@ jobs:
           file dist/aion-server-os-live-0.1-amd64.iso
           docker run --rm -v "$GITHUB_WORKSPACE:/work" debian:trixie bash -lc 'apt-get update >/dev/null; apt-get install -y xorriso >/dev/null; xorriso -indev /work/dist/aion-server-os-live-0.1-amd64.iso -report_el_torito plain'
       - name: Metadata
-        run: printf 'AION Server OS Live 0.1\nCommit: %s\nBuilt: %s\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" > dist/BUILD-INFO.txt
+        run: |
+          printf 'AION Server OS Live 0.1\nCommit: %s\nBuilt: %s\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" > dist/BUILD-INFO.txt
       - uses: actions/upload-artifact@v4
         with:
           name: aion-server-os-live-amd64
