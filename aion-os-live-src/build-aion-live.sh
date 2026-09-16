@@ -5,7 +5,7 @@ ROOT=/work/aion-os-live-src
 WORK=/tmp/aion-live
 OUT=/work/dist
 rm -rf "$WORK"; mkdir -p "$WORK" "$OUT"; cd "$WORK"
-lb config --mode debian --distribution trixie --architectures amd64 --binary-images iso-hybrid --archive-areas 'main contrib non-free-firmware' --debian-installer live --bootappend-live 'boot=live components hostname=aion-live username=aion' --iso-volume 'AION_LIVE_01'
+lb config --mode debian --distribution trixie --architectures amd64 --binary-images iso-hybrid --archive-areas 'main contrib' --firmware-chroot false --firmware-binary false --debian-installer live --bootappend-live 'boot=live components hostname=aion-live username=aion' --iso-volume 'AION_LIVE_01'
 mkdir -p config/package-lists config/archives config/includes.chroot/opt/aion/web config/includes.chroot/opt/aion config/includes.chroot/etc/systemd/system config/hooks/live
 curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-trixie.gpg -o config/archives/proxmox.key.chroot
 cp config/archives/proxmox.key.chroot config/archives/proxmox.key.binary
