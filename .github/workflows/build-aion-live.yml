@@ -1,81 +1,32 @@
 name: Build AION Server OS Live ISO
-
 on:
   push:
     branches: [aion-os-live]
-    paths:
-      - 'aion-os/**'
-      - '.github/workflows/build-aion-live.yml'
+    paths: ['aion-os-live-src/**','.github/workflows/build-aion-live.yml']
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  build-live-iso:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 120
-
     steps:
-      - name: Checkout AION branch
-        uses: actions/checkout@v4
-
-      - name: Build inside Debian 13
-        shell: bash
+      - uses: actions/checkout@v4
+      - name: Build AION Live in Debian 13
         run: |
-          set -euxo pipefail
-          mkdir -p "$GITHUB_WORKSPACE/dist"
-          docker run --rm --privileged \
-            -v "$GITHUB_WORKSPACE:/work" \
-            -w /work \
-            debian:trixie \
-            bash -lc '
-              set -euxo pipefail
-              export DEBIAN_FRONTEND=noninteractive
-              apt-get update
-              apt-get install -y live-build debootstrap xorriso squashfs-tools curl ca-certificates gnupg file
-              rm -rf /tmp/aion-src
-              mkdir -p /tmp/aion-src
-              base64 -d /work/aion-os/payload.tar.gz.b64 | tar -xz -C /tmp/aion-src
-              cd /tmp/aion-src/aion-os-v0.1
-              chmod +x build/build-iso.sh build/install-dev.sh
-              WORK=/tmp/aion-live-work OUT=/work/dist ./build/build-iso.sh
-            '
-
-      - name: Validate ISO structure
-        shell: bash
+          mkdir -p dist
+          docker run --rm --privileged -v "$GITHUB_WORKSPACE:/work" debian:trixie bash -lc 'set -eux; apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y live-build debootstrap xorriso squashfs-tools curl ca-certificates gnupg file; chmod +x /work/aion-os-live-src/build-aion-live.sh; /work/aion-os-live-src/build-aion-live.sh'
+      - name: Validate boot image
         run: |
-          set -euxo pipefail
-          test -s dist/aion-server-os-0.1-amd64.iso
-          file dist/aion-server-os-0.1-amd64.iso
-          sha256sum -c dist/aion-server-os-0.1-amd64.iso.sha256
-          docker run --rm -v "$GITHUB_WORKSPACE:/work" debian:trixie bash -lc '
-            set -eux
-            apt-get update
-            apt-get install -y xorriso
-            xorriso -indev /work/dist/aion-server-os-0.1-amd64.iso -report_el_torito as_mkisofs
-            xorriso -indev /work/dist/aion-server-os-0.1-amd64.iso -find / -maxdepth 2 -type f -exec lsdl
-          '
-
-      - name: Build metadata
-        shell: bash
-        run: |
-          {
-            echo "AION Server OS Live v0.1"
-            echo "Build commit: $GITHUB_SHA"
-            echo "Built: $(date -u +%FT%TZ)"
-            echo
-            cat dist/aion-server-os-0.1-amd64.iso.sha256
-          } > dist/BUILD-INFO.txt
-
-      - name: Upload bootable ISO
-        uses: actions/upload-artifact@v4
+          test -s dist/aion-server-os-live-0.1-amd64.iso
+          sha256sum -c dist/aion-server-os-live-0.1-amd64.iso.sha256
+          file dist/aion-server-os-live-0.1-amd64.iso
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" debian:trixie bash -lc 'apt-get update >/dev/null; apt-get install -y xorriso >/dev/null; xorriso -indev /work/dist/aion-server-os-live-0.1-amd64.iso -report_el_torito plain'
+      - name: Metadata
+        run: printf 'AION Server OS Live 0.1\nCommit: %s\nBuilt: %s\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" > dist/BUILD-INFO.txt
+      - uses: actions/upload-artifact@v4
         with:
           name: aion-server-os-live-amd64
-          path: |
-            dist/aion-server-os-0.1-amd64.iso
-            dist/aion-server-os-0.1-amd64.iso.sha256
-            dist/BUILD-INFO.txt
-          if-no-files-found: error
+          path: dist/
           compression-level: 0
           retention-days: 30
